@@ -1,0 +1,33 @@
+version: '3'
+services:
+  naming:
+    build:
+      context: .
+      dockerfile: naming_server/Dockerfile
+    environment:
+      - STORAGE_SERVERS=http://storage1:8000,http://storage2:8000
+    ports:
+      - "8000:8000"
+  storage1:
+    build:
+      context: .
+      dockerfile: storage_server/Dockerfile
+    volumes:
+      - storage1-data:/data
+    environment:
+      - DATA_PATH=/data
+    ports:
+      - "8001:8000"
+  storage2:
+    build:
+      context: .
+      dockerfile: storage_server/Dockerfile
+    volumes:
+      - storage2-data:/data
+    environment:
+      - DATA_PATH=/data
+    ports:
+      - "8002:8000"
+volumes:
+  storage1-data:
+  storage2-data:
