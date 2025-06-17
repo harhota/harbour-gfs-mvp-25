@@ -79,34 +79,6 @@ def size(filename):
     print(size)
 
 
-def read(filename, output_path):
-    try:
-        resp = requests.get(f"{NAME_SERVER}/files/{filename}")
-    except RequestException as e:
-        print(f"Failed to contact naming server: {e}")
-        return
-    if resp.status_code == 200:
-        with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(resp.text)
-    else:
-        print('Error:', resp.text)
-
-def delete(filename):
-    try:
-        resp = requests.delete(f"{NAME_SERVER}/files/{filename}")
-    except RequestException as e:
-        print(f"Failed to contact naming server: {e}")
-        return
-    print(resp.text)
-
-def size(filename):
-    try:
-        resp = requests.get(f"{NAME_SERVER}/files/{filename}/size")
-    except RequestException as e:
-        print(f"Failed to contact naming server: {e}")
-        return
-    print(resp.text)
-
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
