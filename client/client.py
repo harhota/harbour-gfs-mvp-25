@@ -1,8 +1,10 @@
 import sys
 import os
 import requests
+from requests.exceptions import RequestException, Timeout
 
 NAME_SERVER = os.environ.get('NAME_SERVER', 'http://localhost:8000')
+TIMEOUT = (3.05, 10)
 
 usage = """Usage:
   client.py create <filename> <local_path>
@@ -14,24 +16,50 @@ usage = """Usage:
 def create(filename, local_path):
     with open(local_path, 'r', encoding='utf-8') as f:
         data = f.read()
-    resp = requests.post(f"{NAME_SERVER}/files/{filename}", data=data.encode('utf-8'))
-    print(resp.text)
+    try:
+        resp = requests.post(
+            f"{NAME_SERVER}/files/{filename}",
+            data=data.encode('utf-8'),
+            timeout=TIMEOUT,
+        )
+        print(resp.text)
+    except Timeout:
+        print('request timed out')
+    except RequestException as e:
+        print(f'Error: {e}')
 
 def read(filename, output_path):
-    resp = requests.get(f"{NAME_SERVER}/files/{filename}")
-    if resp.status_code == 200:
-        with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(resp.text)
-    else:
-        print('Error:', resp.text)
+    try:
+        resp = requests.get(f"{NAME_SERVER}/files/{filename}", timeout=TIMEOUT)
+        if resp.status_code == 200:
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write(resp.text)
+        else:
+            print('Error:', resp.text)
+    except Timeout:
+        print('request timed out')
+    except RequestException as e:
+        print(f'Error: {e}')
 
 def delete(filename):
-    resp = requests.delete(f"{NAME_SERVER}/files/{filename}")
-    print(resp.text)
+    try:
+        resp = requests.delete(f"{NAME_SERVER}/files/{filename}", timeout=TIMEOUT)
+        print(resp.text)
+    except Timeout:
+        print('request timed out')
+    except RequestException as e:
+        print(f'Error: {e}')
 
 def size(filename):
-    resp = requests.get(f"{NAME_SERVER}/files/{filename}/size")
-    print(resp.text)
+    try:
+        resp = requests.get(
+            f"{NAME_SERVER}/files/{filename}/size", timeout=TIMEOUT
+        )
+        print(resp.text)
+    except Timeout:
+        print('request timed out')
+    except RequestException as e:
+        print(f'Error: {e}')
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
