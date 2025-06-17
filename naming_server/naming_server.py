@@ -1,6 +1,7 @@
 import os
 import uuid
 import random
+import json
 from flask import Flask, request, jsonify, abort
 import requests
 
@@ -10,8 +11,33 @@ app = Flask(__name__)
 STORAGE_SERVERS = os.environ.get("STORAGE_SERVERS", "").split(",")
 STORAGE_SERVERS = [s.strip() for s in STORAGE_SERVERS if s.strip()]
 REPLICA_COUNT = int(os.environ.get("REPLICA_COUNT", "2"))
+METADATA_PATH = os.environ.get("METADATA_PATH", "metadata.json")
 
-files = {}  # filename -> {"chunks": [{"id": id, "servers": [url, ...]}], "size": int}
+files = {}
+
+def load_metadata():
+    """Load file metadata from disk if available."""
+    global files
+    if os.path.exists(METADATA_PATH):
+        try:
+            with open(METADATA_PATH, "r", encoding="utf-8") as f:
+                files.update(json.load(f))
+        except Exception as e:
+            print(f"Failed to load metadata: {e}")
+
+
+def save_metadata():
+    """Persist file metadata to disk."""
+    tmp_path = METADATA_PATH + ".tmp"
+    try:
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(files, f)
+        os.replace(tmp_path, METADATA_PATH)
+    except Exception as e:
+        print(f"Failed to save metadata: {e}")
+
+# filename -> {"chunks": [{"id": id, "servers": [url, ...]}], "size": int}
+load_metadata()
 
 @app.route('/files/<name>', methods=['POST'])
 def create_file(name):
@@ -52,6 +78,7 @@ def create_file(name):
             )
         entries.append({"id": chunk_id, "servers": stored})
     files[name] = {'chunks': entries, 'size': len(content)}
+    save_metadata()
     return jsonify({'status': 'ok', 'chunks': entries})
 
 @app.route('/files/<name>', methods=['GET'])
@@ -88,6 +115,7 @@ def delete_file(name):
                 requests.delete(url)
             except Exception as e:
                 print(f"Failed to delete chunk {entry['id']} on {server}: {e}")
+    save_metadata()
     return jsonify({'status': 'deleted'})
 
 @app.route('/files/<name>/size', methods=['GET'])

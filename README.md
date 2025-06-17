@@ -78,7 +78,8 @@ export NAME_SERVER=http://<naming-host>:8000
 
 - `requirements.txt` lists the Python dependencies (`flask` and `requests`).
 - The naming server distributes chunks to storage servers at upload time and
-  keeps all metadata in memory (non‑persistent demo implementation).
+  persists its metadata to `metadata.json` (configurable via `METADATA_PATH`)
+  so file information survives restarts.
 - Storage servers write chunk files under their `/data` directory. If a storage
   volume is full the server returns HTTP 507 so uploads fail fast.
 

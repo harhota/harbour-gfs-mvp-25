@@ -1,6 +1,7 @@
 import sys
 import os
 import requests
+from requests.exceptions import RequestException
 
 NAME_SERVER = os.environ.get('NAME_SERVER', 'http://localhost:8000')
 
@@ -14,11 +15,21 @@ usage = """Usage:
 def create(filename, local_path):
     with open(local_path, 'r', encoding='utf-8') as f:
         data = f.read()
-    resp = requests.post(f"{NAME_SERVER}/files/{filename}", data=data.encode('utf-8'))
+    try:
+        resp = requests.post(
+            f"{NAME_SERVER}/files/{filename}", data=data.encode('utf-8')
+        )
+    except RequestException as e:
+        print(f"Failed to contact naming server: {e}")
+        return
     print(resp.text)
 
 def read(filename, output_path):
-    resp = requests.get(f"{NAME_SERVER}/files/{filename}")
+    try:
+        resp = requests.get(f"{NAME_SERVER}/files/{filename}")
+    except RequestException as e:
+        print(f"Failed to contact naming server: {e}")
+        return
     if resp.status_code == 200:
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(resp.text)
@@ -26,11 +37,19 @@ def read(filename, output_path):
         print('Error:', resp.text)
 
 def delete(filename):
-    resp = requests.delete(f"{NAME_SERVER}/files/{filename}")
+    try:
+        resp = requests.delete(f"{NAME_SERVER}/files/{filename}")
+    except RequestException as e:
+        print(f"Failed to contact naming server: {e}")
+        return
     print(resp.text)
 
 def size(filename):
-    resp = requests.get(f"{NAME_SERVER}/files/{filename}/size")
+    try:
+        resp = requests.get(f"{NAME_SERVER}/files/{filename}/size")
+    except RequestException as e:
+        print(f"Failed to contact naming server: {e}")
+        return
     print(resp.text)
 
 if __name__ == '__main__':
