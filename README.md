@@ -33,8 +33,7 @@ simple **CLI client**.
 - Chunk replication (replica count configurable via environment)
 - Dockerized naming and storage servers
 - Graceful error when storage volumes run out of space
-- Client and naming server requests use a default timeout to avoid hanging
-  connections
+- Client and naming server requests use a timeout by default to avoid hangs
 
 ## Running with Docker
 
