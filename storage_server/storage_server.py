@@ -8,9 +8,18 @@ os.makedirs(DATA_PATH, exist_ok=True)
 
 @app.route('/chunks/<chunk_id>', methods=['POST'])
 def store_chunk(chunk_id):
+    """Store a chunk on disk.
+
+    Returns HTTP 507 if the storage volume is full.
+    """
     path = os.path.join(DATA_PATH, chunk_id)
-    with open(path, 'w', encoding='utf-8') as f:
-        f.write(request.data.decode('utf-8'))
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(request.data.decode('utf-8'))
+    except OSError as e:
+        if e.errno == 28:  # No space left on device
+            return 'Insufficient storage', 507
+        abort(500)
     return 'OK'
 
 @app.route('/chunks/<chunk_id>', methods=['GET'])
