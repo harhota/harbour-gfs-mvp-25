@@ -39,4 +39,17 @@ def delete_chunk(chunk_id):
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', '8000'))
-    app.run(host='0.0.0.0', port=port)
+
+    from werkzeug.serving import make_server
+    import signal
+
+    server = make_server('0.0.0.0', port, app)
+
+    def _shutdown(signum, frame):
+        print(f'Received signal {signum}, shutting down...')
+        server.shutdown()
+
+    signal.signal(signal.SIGINT, _shutdown)
+    signal.signal(signal.SIGTERM, _shutdown)
+
+    server.serve_forever()
