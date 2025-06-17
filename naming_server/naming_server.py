@@ -4,6 +4,7 @@ import random
 import json
 from flask import Flask, request, jsonify, abort
 import requests
+from requests.exceptions import RequestException, Timeout
 
 app = Flask(__name__)
 
@@ -11,7 +12,10 @@ app = Flask(__name__)
 STORAGE_SERVERS = os.environ.get("STORAGE_SERVERS", "").split(",")
 STORAGE_SERVERS = [s.strip() for s in STORAGE_SERVERS if s.strip()]
 REPLICA_COUNT = int(os.environ.get("REPLICA_COUNT", "2"))
+
+TIMEOUT = (3.05, 10)
 METADATA_PATH = os.environ.get("METADATA_PATH", "metadata.json")
+
 
 files = {}
 
@@ -56,7 +60,11 @@ def create_file(name):
         for server in servers:
             url = f"{server}/chunks/{chunk_id}"
             try:
-                resp = requests.post(url, data=chunk.encode('utf-8'))
+                resp = requests.post(
+                    url,
+                    data=chunk.encode('utf-8'),
+                    timeout=TIMEOUT,
+                )
                 if resp.status_code == 200:
                     stored.append(server)
                 else:
@@ -64,13 +72,19 @@ def create_file(name):
                         f"Failed to store chunk {chunk_id} on {server}: "
                         f"{resp.status_code}"
                     )
-            except Exception as e:
+            except Timeout:
+                print("request timed out")
+            except RequestException as e:
                 print(f"Failed to store chunk {chunk_id} on {server}: {e}")
         if len(stored) < REPLICA_COUNT:
             for server in stored:
                 try:
-                    requests.delete(f"{server}/chunks/{chunk_id}")
-                except Exception:
+                    requests.delete(
+                        f"{server}/chunks/{chunk_id}", timeout=TIMEOUT
+                    )
+                except Timeout:
+                    print("request timed out")
+                except RequestException:
                     pass
             return (
                 jsonify({"error": "Insufficient storage for chunk", "chunk": chunk_id}),
@@ -92,11 +106,14 @@ def read_file(name):
         for server in entry['servers']:
             url = f"{server}/chunks/{entry['id']}"
             try:
-                resp = requests.get(url)
+                resp = requests.get(url, timeout=TIMEOUT)
                 if resp.status_code == 200:
                     chunk_data = resp.text
                     break
-            except Exception:
+            except Timeout:
+                print("request timed out")
+                continue
+            except RequestException:
                 continue
         if chunk_data is None:
             abort(500)
@@ -112,8 +129,10 @@ def delete_file(name):
         for server in entry['servers']:
             url = f"{server}/chunks/{entry['id']}"
             try:
-                requests.delete(url)
-            except Exception as e:
+                requests.delete(url, timeout=TIMEOUT)
+            except Timeout:
+                print("request timed out")
+            except RequestException as e:
                 print(f"Failed to delete chunk {entry['id']} on {server}: {e}")
     save_metadata()
     return jsonify({'status': 'deleted'})

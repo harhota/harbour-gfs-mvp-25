@@ -1,9 +1,12 @@
 import sys
 import os
 import requests
-from requests.exceptions import RequestException
+
+from requests.exceptions import RequestException, Timeout
+
 
 NAME_SERVER = os.environ.get('NAME_SERVER', 'http://localhost:8000')
+TIMEOUT = (3.05, 10)
 
 usage = """Usage:
   client.py create <filename> <local_path>
@@ -17,12 +20,64 @@ def create(filename, local_path):
         data = f.read()
     try:
         resp = requests.post(
-            f"{NAME_SERVER}/files/{filename}", data=data.encode('utf-8')
+            f"{NAME_SERVER}/files/{filename}",
+            data=data.encode('utf-8'),
+            timeout=TIMEOUT,
         )
+        print(resp.text)
+    except Timeout:
+        print('request timed out')
     except RequestException as e:
-        print(f"Failed to contact naming server: {e}")
-        return
-    print(resp.text)
+        print(f'Error: {e}')
+
+def read(filename, output_path):
+    try:
+        resp = requests.get(f"{NAME_SERVER}/files/{filename}", timeout=TIMEOUT)
+        if resp.status_code == 200:
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write(resp.text)
+        else:
+            print('Error:', resp.text)
+    except Timeout:
+        print('request timed out')
+    except RequestException as e:
+        print(f'Error: {e}')
+
+def delete(filename):
+    try:
+        resp = requests.delete(f"{NAME_SERVER}/files/{filename}", timeout=TIMEOUT)
+        print(resp.text)
+    except Timeout:
+        print('request timed out')
+    except RequestException as e:
+        print(f'Error: {e}')
+
+def size(filename):
+    """
+    Queries NAME_SERVER for the size of `filename` and prints it.
+    Exits with code 1 on error.
+    """
+    url = f"{NAME_SERVER}/files/{filename}/size"
+    try:
+        resp = requests.get(url, timeout=TIMEOUT)
+        resp.raise_for_status()
+    except Timeout:
+        print("Request timed out", file=sys.stderr)
+        sys.exit(1)
+    except RequestException as e:
+        print(f"Network error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    # At this point, resp.status_code is 2xx
+    try:
+        data = resp.json()
+        size = data.get('size')
+    except ValueError:
+        print("Invalid JSON in response", file=sys.stderr)
+        sys.exit(1)
+
+    print(size)
+
 
 def read(filename, output_path):
     try:
@@ -51,6 +106,7 @@ def size(filename):
         print(f"Failed to contact naming server: {e}")
         return
     print(resp.text)
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
