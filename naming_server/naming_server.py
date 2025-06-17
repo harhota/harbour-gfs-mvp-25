@@ -1,0 +1,81 @@
+import os
+import uuid
+import random
+from flask import Flask, request, jsonify, abort
+import requests
+
+app = Flask(__name__)
+
+# list of storage server URLs from env
+STORAGE_SERVERS = os.environ.get("STORAGE_SERVERS", "").split(",")
+STORAGE_SERVERS = [s.strip() for s in STORAGE_SERVERS if s.strip()]
+REPLICA_COUNT = int(os.environ.get("REPLICA_COUNT", "2"))
+
+files = {}  # filename -> {"chunks": [{"id": id, "servers": [url, ...]}], "size": int}
+
+@app.route('/files/<name>', methods=['POST'])
+def create_file(name):
+    if not STORAGE_SERVERS:
+        return jsonify({'error': 'No storage servers configured'}), 500
+    content = request.data.decode('utf-8')
+    chunks = [content[i:i+1024] for i in range(0, len(content), 1024)]
+    entries = []
+    for chunk in chunks:
+        chunk_id = str(uuid.uuid4())
+        servers = random.sample(STORAGE_SERVERS, min(REPLICA_COUNT, len(STORAGE_SERVERS)))
+        for server in servers:
+            url = f"{server}/chunks/{chunk_id}"
+            try:
+                requests.post(url, data=chunk.encode('utf-8'))
+            except Exception as e:
+                print(f"Failed to store chunk {chunk_id} on {server}: {e}")
+        entries.append({'id': chunk_id, 'servers': servers})
+    files[name] = {'chunks': entries, 'size': len(content)}
+    return jsonify({'status': 'ok', 'chunks': entries})
+
+@app.route('/files/<name>', methods=['GET'])
+def read_file(name):
+    meta = files.get(name)
+    if not meta:
+        abort(404)
+    data = []
+    for entry in meta['chunks']:
+        chunk_data = None
+        for server in entry['servers']:
+            url = f"{server}/chunks/{entry['id']}"
+            try:
+                resp = requests.get(url)
+                if resp.status_code == 200:
+                    chunk_data = resp.text
+                    break
+            except Exception:
+                continue
+        if chunk_data is None:
+            abort(500)
+        data.append(chunk_data)
+    return ''.join(data)
+
+@app.route('/files/<name>', methods=['DELETE'])
+def delete_file(name):
+    meta = files.pop(name, None)
+    if not meta:
+        abort(404)
+    for entry in meta['chunks']:
+        for server in entry['servers']:
+            url = f"{server}/chunks/{entry['id']}"
+            try:
+                requests.delete(url)
+            except Exception as e:
+                print(f"Failed to delete chunk {entry['id']} on {server}: {e}")
+    return jsonify({'status': 'deleted'})
+
+@app.route('/files/<name>/size', methods=['GET'])
+def size_file(name):
+    meta = files.get(name)
+    if not meta:
+        abort(404)
+    return jsonify({'size': meta['size']})
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', '8000'))
+    app.run(host='0.0.0.0', port=port)
