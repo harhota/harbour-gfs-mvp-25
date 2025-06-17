@@ -32,6 +32,7 @@ simple **CLI client**.
 - Operations: `create`, `read`, `delete`, `size`
 - Chunk replication (replica count configurable via environment)
 - Dockerized naming and storage servers
+- Graceful error when storage volumes run out of space
 
 ## Running with Docker
 
@@ -78,7 +79,8 @@ export NAME_SERVER=http://<naming-host>:8000
 - `requirements.txt` lists the Python dependencies (`flask` and `requests`).
 - The naming server distributes chunks to storage servers at upload time and
   keeps all metadata in memory (non‑persistent demo implementation).
-- Storage servers simply write chunk files under their `/data` directory.
+- Storage servers write chunk files under their `/data` directory. If a storage
+  volume is full the server returns HTTP 507 so uploads fail fast.
 
 This MVP aims to demonstrate the basic idea of a distributed file system with
 chunking and replication. It is **not** intended for production use but serves as

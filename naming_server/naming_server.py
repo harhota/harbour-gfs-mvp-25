@@ -22,14 +22,35 @@ def create_file(name):
     entries = []
     for chunk in chunks:
         chunk_id = str(uuid.uuid4())
-        servers = random.sample(STORAGE_SERVERS, min(REPLICA_COUNT, len(STORAGE_SERVERS)))
+        servers = random.sample(
+            STORAGE_SERVERS,
+            min(REPLICA_COUNT, len(STORAGE_SERVERS))
+        )
+        stored = []
         for server in servers:
             url = f"{server}/chunks/{chunk_id}"
             try:
-                requests.post(url, data=chunk.encode('utf-8'))
+                resp = requests.post(url, data=chunk.encode('utf-8'))
+                if resp.status_code == 200:
+                    stored.append(server)
+                else:
+                    print(
+                        f"Failed to store chunk {chunk_id} on {server}: "
+                        f"{resp.status_code}"
+                    )
             except Exception as e:
                 print(f"Failed to store chunk {chunk_id} on {server}: {e}")
-        entries.append({'id': chunk_id, 'servers': servers})
+        if len(stored) < REPLICA_COUNT:
+            for server in stored:
+                try:
+                    requests.delete(f"{server}/chunks/{chunk_id}")
+                except Exception:
+                    pass
+            return (
+                jsonify({"error": "Insufficient storage for chunk", "chunk": chunk_id}),
+                507,
+            )
+        entries.append({"id": chunk_id, "servers": stored})
     files[name] = {'chunks': entries, 'size': len(content)}
     return jsonify({'status': 'ok', 'chunks': entries})
 
