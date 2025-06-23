@@ -6,6 +6,8 @@ import random
 from typing import TypedDict
 import time
 
+import uvicorn
+
 # GFS Master Node Implementation
 class ChunkEntry(TypedDict):
     chunkserver_id: str
@@ -25,7 +27,7 @@ class Master:
         self.last_garbage_collection: float = 0.0  # Timestamp of the last garbage collection
         self.garbage_collection_time: float = 2 * 60  # Time in seconds before deleted chunks are eligible for garbage collection (default: 2 minutes)
 
-        self.heartbeat_timeout: float = 10.0  # Time in seconds before a chunkserver is considered unresponsive
+        self.heartbeat_timeout: float = 5 * 60  # Time in seconds before a chunkserver is considered unresponsive
 
         self.chunkserver_ids: Set[str] = set()  # Set of registered chunkserver IDs
         self.last_heartbeat: Dict[str, float] = {}  # Stores last heartbeat time for each chunkserver
@@ -178,6 +180,7 @@ class Master:
 
         self.chunkserver_ids.add(chunkserver_id)
         self.chunkservers[chunkserver_id] = set() 
+        self.last_heartbeat[chunkserver_id] = time.time()
 
     def heartbeat(self, chunkserver_id: str) -> bool:
         if chunkserver_id not in self.chunkserver_ids:
@@ -248,20 +251,6 @@ class RegisterChunkserverRequest(BaseModel):
 class HeartbeatRequest(BaseModel):
     chunkserver_id: str
 
-
-
-@app.on_event("startup")
-async def start_background_tasks():
-    async def serial_background_loop():
-        while True:
-            master.heartbeat_check()
-            master.garbage_collection()
-            await asyncio.sleep(5)
-
-    asyncio.create_task(serial_background_loop())
-
-
-
 # -------------------
 # API Endpoints
 # -------------------
@@ -289,3 +278,33 @@ def register_chunkserver(req: RegisterChunkserverRequest):
 @app.post("/heartbeat")
 def heartbeat(req: HeartbeatRequest):
     master.heartbeat(req.chunkserver_id)
+
+
+# -------- Testing --------
+@app.get("/test/get_chunkservers")
+def get_chunkservers():
+    return list(master.chunkserver_ids)
+
+@app.get("/test/get_files")
+def get_files():
+    return list(master.files.keys())
+
+@app.get("/test/get_chunkserver_chunks")
+def get_chunkserver_chunks(chunkserver_id: str):
+    return list(master.chunkservers.get(chunkserver_id, []))
+
+
+async def serial_background_loop():
+    while True:
+        master.heartbeat_check()
+        master.garbage_collection()
+        await asyncio.sleep(5)
+
+async def start_app():
+    asyncio.create_task(serial_background_loop())
+    config = uvicorn.Config(app=app, host="0.0.0.0", port=8000)
+    server = uvicorn.Server(config)
+    await server.serve()
+
+if __name__ == "__main__":
+    asyncio.run(start_app())
