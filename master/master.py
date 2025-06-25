@@ -145,7 +145,6 @@ class Master:
         self.files[path] = allocated_chunks
 
         return allocated_chunks
-    
 
     def get_file_chunks(self, path: str) -> List[List[ChunkEntry]]:
         if not self.is_valid_path(path):

@@ -1,2 +1,6 @@
 flask
 requests
+fastapi
+pydantic
+uvicorn 
+asyncio
