@@ -1,89 +1,49 @@
-# Harbour Distributed File System (MVP)
+# Project README
 
-This project is a minimal distributed file system designed for text files. It
-consists of a single **naming server**, multiple **storage servers** and a
-simple **CLI client**.
+## Overview
 
-## Architecture
+This project implements a distributed storage system inspired by **Google File System (GFS)**. GFS is designed to handle large-scale data across many machines, providing fault tolerance, high throughput, and reliability by dividing files into chunks stored on multiple chunk servers coordinated by a master server.
 
-```
-+------------+       +---------------+
-|  Client    +<----->+ Naming Server |
-+------------+       +---------------+
-                          |  |
-              +-----------+  +-----------+
-              |                         |
-       +-------------+           +-------------+
-       | Storage #1  |   ...     | Storage #N  |
-       +-------------+           +-------------+
-```
+Our system includes:
 
-- **Naming server** keeps file metadata and knows where every file chunk is
-  stored.
-- **Storage servers** store 1&nbsp;KB chunks of files. Each chunk is replicated on
-  multiple storage servers.
-- **Client** provides commands to create, read, delete and get the size of a
-  file.
+- **Master Server:** Manages metadata, chunk locations, and client requests.
+- **Chunk Servers:** Store file chunks and handle read/write operations.
+- **Frontend (Client):** The user interface where users interact directly with the system to perform file operations. In this project, the client and frontend are combined.
 
-## Features
+## How It Works
 
-- Text file support only
-- Fixed chunk size: **1&nbsp;KB**
-- Operations: `create`, `read`, `delete`, `size`
-- Chunk replication (replica count configurable via environment)
-- Dockerized naming and storage servers
-- Graceful error when storage volumes run out of space
-- Client and naming server requests use a timeout by default to avoid hangs
+- Files are split into fixed-size chunks.
+- The Master Server maintains chunk metadata and their locations.
+- Chunk Servers store chunks and replicate them to ensure fault tolerance.
+- The Frontend communicates with backend servers to upload, download, and manage files.
 
-## Running with Docker
+## Running the Project with Docker Compose
 
-This repository contains a `docker-compose.yml` that launches one naming server
-and two storage servers. Docker images are built from the provided Dockerfiles.
+1. Clone the repository:
 
-```
-docker-compose up --build
-```
+   $ git clone <repository-url>
+   $ cd <repository-folder>
 
-The naming server will listen on port **8000**, while the two storage servers
-will listen on ports **8001** and **8002**. The naming server automatically
-connects to both storage servers via the `STORAGE_SERVERS` environment variable
-set in `docker-compose.yml`.
+2. Build and start all services (master server, chunk servers, frontend):
 
-## Using the Client
+   $ docker-compose up --build
 
-The client communicates with the naming server using HTTP. After the services are
-running you can use the client to interact with the distributed file system.
+3. Open your browser and navigate to:
 
-```
-# Create a file
-python client/client.py create myfile.txt ./local.txt
+   http://localhost:5173/
 
-# Read the file back
-python client/client.py read myfile.txt ./output.txt
+4. Use the frontend interface to upload, download, and manage files within the distributed file system.
 
-# Get size information
-python client/client.py size myfile.txt
+Architecture:
 
-# Delete the file
-python client/client.py delete myfile.txt
-```
+- Master Server: Maintains metadata for files and chunks, manages chunk locations and replication.
+- Chunk Servers: Store chunks of files and handle client requests for data.
+- Frontend (Client): Single combined client and frontend interface for users to interact with the system.
 
-Set the `NAME_SERVER` environment variable if the naming server is not running on
-`http://localhost:8000`.
+Notes:
 
-```
-export NAME_SERVER=http://<naming-host>:8000
-```
+- The system uses a simplified version of the Google File System (GFS) concept.
+- File data is split into chunks, replicated, and distributed across chunk servers.
+- The frontend communicates with the master and chunk servers via API calls.
 
-## Development Notes
-
-- `requirements.txt` lists the Python dependencies (`flask` and `requests`).
-- The naming server distributes chunks to storage servers at upload time and
-  persists its metadata to `metadata.json` (configurable via `METADATA_PATH`)
-  so file information survives restarts.
-- Storage servers write chunk files under their `/data` directory. If a storage
-  volume is full the server returns HTTP 507 so uploads fail fast.
-
-This MVP aims to demonstrate the basic idea of a distributed file system with
-chunking and replication. It is **not** intended for production use but serves as
-a starting point for experimentation.
+For any questions or issues, please refer to the project documentation or contact the maintainers.
