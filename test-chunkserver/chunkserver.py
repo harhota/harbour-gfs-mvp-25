@@ -1,10 +1,16 @@
 import socket
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import uvicorn
 import httpx
 import asyncio
 import os
+
+
+class ChunkPayload(BaseModel):
+    chunk_id: int
+    data: str
 
 class ChunkServer:
     def __init__(self, master_url: str = "http://localhost:8000"):
@@ -28,17 +34,17 @@ class ChunkServer:
         )
 
         @self.app.post("/write_chunk")
-        async def write_chunk(chunk_id: int, data: str):
+        async def write_chunk(chunk: ChunkPayload):
             # Ensure the directory for this chunkserver exists
             dir_path = os.path.join("chunks", self.id.replace(":", "_").replace("/", "_"))
             os.makedirs(dir_path, exist_ok=True)
 
             # Write the chunk data to a file named by chunk_id
-            file_path = os.path.join(dir_path, f"{chunk_id}.chunk")
+            file_path = os.path.join(dir_path, f"{chunk.chunk_id}.chunk")
             with open(file_path, "w") as f:
-                f.write(data)
+                f.write(chunk.data)
 
-            self.stored_chunks.add(chunk_id)
+            self.stored_chunks.add(chunk.chunk_id)
             return {"status": "success", "address": self.address}
 
         @self.app.get("/read_chunk/{chunk_id}")
