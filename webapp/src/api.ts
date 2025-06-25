@@ -1,6 +1,7 @@
 const BASE_URL = import.meta.env.VITE_NAME_SERVER ?? 'http://localhost:8000'
 
 export async function uploadFileRequest(filename: string, data: string): Promise<string> {
+  // 1. Create file and get chunk allocation
   const res = await fetch(`${BASE_URL}/create_file`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -10,7 +11,53 @@ export async function uploadFileRequest(filename: string, data: string): Promise
     }),
   })
   if (!res.ok) throw new Error(await res.text())
-  return 'File created successfully'
+
+  // 2. Get the chunk allocation
+  const chunksRes = await fetch(`${BASE_URL}/get_file_chunks?path=${encodeURIComponent(filename)}`)
+  if (!chunksRes.ok) throw new Error(await chunksRes.text())
+  const chunkSets: Array<
+    Array<{
+      chunkserver_id: string
+      chunk_id: number
+      is_deleted: boolean
+      deleted_at: number | null
+    }>
+  > = await chunksRes.json()
+
+  // 3. Split data into chunks (max 1000 chars each)
+  const MAX_CHUNK_SIZE = 1000
+  const totalChunks = chunkSets.length
+  const chunks: string[] = []
+
+  for (let i = 0; i < totalChunks; i++) {
+    const start = i * MAX_CHUNK_SIZE
+    const end = Math.min(start + MAX_CHUNK_SIZE, data.length)
+    chunks.push(data.slice(start, end))
+  }
+
+  // 4. Write each chunk to all its replicas
+  const writePromises = chunkSets.map(async (replicas, chunkIndex) => {
+    const chunkData = chunks[chunkIndex]
+
+    // Write to all replicas in parallel
+    const replicaPromises = replicas.map(async (replica) => {
+      const writeRes = await fetch(`${replica.chunkserver_id}/write_chunk/${replica.chunk_id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: chunkData }),
+      })
+      if (!writeRes.ok) {
+        throw new Error(`Failed to write to ${replica.chunkserver_id}: ${await writeRes.text()}`)
+      }
+      return writeRes.json()
+    })
+
+    await Promise.all(replicaPromises)
+  })
+
+  // 5. Wait for all chunks to be written
+  await Promise.all(writePromises)
+  return 'File uploaded successfully'
 }
 
 export async function readFileRequest(filename: string): Promise<string> {
@@ -42,7 +89,7 @@ export async function readFileRequest(filename: string): Promise<string> {
 
       try {
         const chunkserverUrl = resolveChunkserverUrl(replica.chunkserver_id)
-        const chunkRes = await fetch(`${chunkserverUrl}/${replica.chunk_id}`)
+        const chunkRes = await fetch(`${chunkserverUrl}/read_chunk/${replica.chunk_id}`)
         if (chunkRes.ok) {
           return await chunkRes.text()
         }
