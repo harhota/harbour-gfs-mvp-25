@@ -1,7 +1,7 @@
 # python virtual env
 .venv 
 __pycache__/
-webapp/node_modules/
-webapp/dist/
-webapp/.vite
+frontend/node_modules/
+frontend/dist/
+frontend/.vite
 chunkserver/chunks

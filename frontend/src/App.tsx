@@ -53,6 +53,7 @@ export default function App() {
         setErrorMessage("");
         try {
             await readQuery.refetch();
+            if (readQuery.data) setContent(readQuery.data);
         } catch (e: any) {
             const parsedError = JSON.parse(e.message);
             setErrorMessage(parsedError.detail);
@@ -65,6 +66,7 @@ export default function App() {
         try {
             await deleteMutation.mutateAsync(filename);
             setMessage("File deleted");
+            setContent("");
         } catch (e: any) {
             const parsedError = JSON.parse(e.message);
             setErrorMessage(parsedError.detail);
@@ -84,7 +86,7 @@ export default function App() {
 
     return (
         <div>
-            <Heading>Harbour DFS Client</Heading>
+            <Heading>Harbour GFS Client</Heading>
             <Flex
                 direction="column"
                 gap="3"
