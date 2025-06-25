@@ -76,6 +76,7 @@ export async function fileSizeRequest(filename: string): Promise<number> {
   if (!res.ok) throw new Error(await res.text())
   const chunks = await res.json()
   // Assuming each chunk is max 1000 characters (from master.py max_chunk_size)
+  // TODO: should be real size, not max_chunk_size * chunks.length
   const validChunks = chunks.filter((replicas: any[]) => replicas.length > 0 && replicas.every((c: any) => !c.is_deleted))
-  return validChunks.length * 1000
+  return validChunks[0].length * 1000
 }

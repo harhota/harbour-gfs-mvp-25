@@ -1,0 +1,41 @@
+{
+  "hash": "5161e443",
+  "browserHash": "19490d9a",
+  "optimized": {
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "74210d8d",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "b1d20a0a",
+      "needsInterop": true
+    },
+    "@tanstack/react-query": {
+      "src": "../../node_modules/@tanstack/react-query/build/modern/index.js",
+      "file": "@tanstack_react-query.js",
+      "fileHash": "8fa39872",
+      "needsInterop": false
+    },
+    "@radix-ui/themes": {
+      "src": "../../node_modules/@radix-ui/themes/dist/esm/index.js",
+      "file": "@radix-ui_themes.js",
+      "fileHash": "df3a120a",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-RJJH5ZF2": {
+      "file": "chunk-RJJH5ZF2.js"
+    },
+    "chunk-6MPLALIQ": {
+      "file": "chunk-6MPLALIQ.js"
+    },
+    "chunk-PFFL56NK": {
+      "file": "chunk-PFFL56NK.js"
+    }
+  }
+}
