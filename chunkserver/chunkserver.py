@@ -7,60 +7,37 @@ import httpx
 import asyncio
 import os
 
-
 class ChunkPayload(BaseModel):
     chunk_id: int
     data: str
 
 class ChunkServer:
-    def __init__(self, master_url: str = "http://localhost:8000"):
+    def __init__(self, master_url: str = "http://master:8000"):
         self.host = "0.0.0.0"
-        self.port = self.find_free_port()
-        self.address = f"http://{self.get_ip_address()}:{self.port}"
-        self.id = self.address
+        self.port = 8000
+        chunkserver_id = os.getenv("CHUNKSERVER_ID", socket.gethostname())
+        self.id = chunkserver_id
+        self.address = f"http://{self.id}:{self.port}"
+
         self.master_url = master_url
         self.stored_chunks = set()
         self.heartbeat_interval = 10  # seconds
 
         self.app = FastAPI()
 
-        # ✅ Add CORS middleware
         self.app.add_middleware(
             CORSMiddleware,
-            allow_origins=["*"],  # or specify allowed origins
+            allow_origins=["*"],
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],
         )
-        
-        @self.app.post("/replicate_chunk")
-        async def replicate_chunk(source_chunkserver_id: str, source_chunk_id: int, target_chunk_id: int):
-            # Fetch chunk data from the source chunkserver
-            try:
-                async with httpx.AsyncClient() as client:
-                    resp = await client.get(f"{source_chunkserver_id}/read_chunk/{source_chunk_id}")
-                    if resp.status_code != 200 or resp.json().get("status") != "success":
-                        return {"status": "error", "message": "Failed to fetch chunk from source"}
-                    data = resp.json()["data"]
-            except Exception as e:
-                return {"status": "error", "message": f"Error contacting source chunkserver: {e}"}
-
-            # Write the chunk data to a new file with target_chunk_id
-            dir_path = os.path.join("chunks", self.id.replace(":", "_").replace("/", "_"))
-            os.makedirs(dir_path, exist_ok=True)
-            file_path = os.path.join(dir_path, f"{target_chunk_id}.chunk")
-            with open(file_path, "w") as f:
-                f.write(data)
-            self.stored_chunks.add(target_chunk_id)
-            return {"status": "success", "message": f"Chunk {source_chunk_id} replicated as {target_chunk_id}"}
 
         @self.app.post("/write_chunk")
         async def write_chunk(chunk: ChunkPayload):
-            # Ensure the directory for this chunkserver exists
             dir_path = os.path.join("chunks", self.id.replace(":", "_").replace("/", "_"))
             os.makedirs(dir_path, exist_ok=True)
 
-            # Write the chunk data to a file named by chunk_id
             file_path = os.path.join(dir_path, f"{chunk.chunk_id}.chunk")
             with open(file_path, "w") as f:
                 f.write(chunk.data)
@@ -70,11 +47,9 @@ class ChunkServer:
 
         @self.app.get("/read_chunk/{chunk_id}")
         async def read_chunk(chunk_id: int):
-            # Check if the chunk is stored
             if chunk_id not in self.stored_chunks:
                 return {"status": "error", "message": "Chunk not found"}
 
-            # Read the chunk data from the file
             dir_path = os.path.join("chunks", self.id.replace(":", "_").replace("/", "_"))
             file_path = os.path.join(dir_path, f"{chunk_id}.chunk")
             with open(file_path, "r") as f:
@@ -82,25 +57,47 @@ class ChunkServer:
 
             return {"status": "success", "data": data}
 
+        @self.app.post("/replicate_chunk")
+        async def replicate_chunk(source_chunkserver_id: str, source_chunk_id: int, target_chunk_id: int):
+            try:
+                async with httpx.AsyncClient() as client:
+                    resp = await client.get(f"{source_chunkserver_id}/read_chunk/{source_chunk_id}")
+                    if resp.status_code != 200 or resp.json().get("status") != "success":
+                        return {"status": "error", "message": "Failed to fetch chunk from source"}
+                    data = resp.json()["data"]
+            except Exception as e:
+                return {"status": "error", "message": f"Error contacting source chunkserver: {e}"}
+
+            dir_path = os.path.join("chunks", self.id.replace(":", "_").replace("/", "_"))
+            os.makedirs(dir_path, exist_ok=True)
+            file_path = os.path.join(dir_path, f"{target_chunk_id}.chunk")
+            with open(file_path, "w") as f:
+                f.write(data)
+
+            self.stored_chunks.add(target_chunk_id)
+            return {"status": "success", "message": f"Chunk {source_chunk_id} replicated as {target_chunk_id}"}
+
     def find_free_port(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind(('', 0))
             return s.getsockname()[1]
 
-    def get_ip_address(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            s.connect(("8.8.8.8", 80))
-            return s.getsockname()[0]
-        finally:
-            s.close()
-
     async def register_with_master(self):
         async with httpx.AsyncClient() as client:
-            await client.post(
-                f"{self.master_url}/register_chunkserver",
-                json={"chunkserver_id": self.address}
-            )
+            while True:
+                try:
+                    resp = await client.post(
+                        f"{self.master_url}/register_chunkserver",
+                        json={"chunkserver_id": self.address}
+                    )
+                    if resp.status_code == 200:
+                        print(f"✅ Registered with master at {self.master_url}")
+                        break
+                    else:
+                        print(f"⚠️ Failed to register with master, status: {resp.status_code}")
+                except Exception as e:
+                    print(f"⚠️ Could not connect to master ({self.master_url}), retrying in 2 seconds... ({e})")
+                await asyncio.sleep(2)
 
     async def send_heartbeat_loop(self):
         async with httpx.AsyncClient() as client:
