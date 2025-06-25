@@ -14,7 +14,7 @@ export async function uploadFileRequest(filename: string, data: string): Promise
 
   // 2. Get the chunk allocation
   const chunksRes = await fetch(`${BASE_URL}/get_file_chunks?path=${encodeURIComponent(filename)}`)
-  if (!chunksRes.ok) throw new Error(await chunksRes.text())
+  if (!chunksRes.ok) throw new Error(await (await chunksRes.json()).detail)
   const chunkSets: Array<
     Array<{
       chunkserver_id: string
@@ -66,7 +66,7 @@ export async function uploadFileRequest(filename: string, data: string): Promise
 export async function readFileRequest(filename: string): Promise<string> {
   // 1. Get chunk metadata from master
   const res = await fetch(`${BASE_URL}/get_file_chunks?path=${encodeURIComponent(filename)}`)
-  if (!res.ok) throw new Error(await res.text())
+  if (!res.ok) throw new Error(await (await res.json()).detail)
   const chunkSets: Array<
     Array<{
       chunkserver_id: string
@@ -124,7 +124,7 @@ export async function deleteFileRequest(filename: string): Promise<string> {
 export async function fileSizeRequest(filename: string): Promise<number> {
   // 1. Get chunk metadata from master
   const res = await fetch(`${BASE_URL}/get_file_chunks?path=${encodeURIComponent(filename)}`)
-  if (!res.ok) throw new Error(await res.text())
+  if (!res.ok) throw new Error(await (await res.json()).detail)
   const chunkSets: Array<
     Array<{
       chunkserver_id: string
