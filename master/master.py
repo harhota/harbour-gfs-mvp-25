@@ -268,8 +268,8 @@ def delete_file(req: DeleteFileRequest):
     return master.delete_file(req.path)
 
 @app.get("/get_file_chunks")
-def get_file_chunks(req: GetFileChunksRequest):
-    return master.get_file_chunks(req.path)
+def get_file_chunks(path : str):
+    return master.get_file_chunks(path)
 
 # -------- From Chunkserver --------
 
