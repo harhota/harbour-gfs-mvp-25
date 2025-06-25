@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Theme, Button, TextField, TextArea, Flex, Heading } from '@radix-ui/themes'
+import { Theme, Button, TextField, TextArea, Flex, Heading, Text } from '@radix-ui/themes'
 import { useUploadFile, useReadFile, useDeleteFile, useFileSize } from './hooks'
 
 export default function App() {
@@ -10,6 +10,7 @@ export default function App() {
   const uploadMutation = useUploadFile()
   const deleteMutation = useDeleteFile()
   const readQuery = useReadFile(filename, false)
+  const { error: readQueryError } = readQuery
   const sizeQuery = useFileSize(filename, false)
 
   useEffect(() => {
@@ -68,8 +69,13 @@ export default function App() {
           <Button onClick={handleDelete}>Delete</Button>
           <Button onClick={handleSize}>Size</Button>
         </Flex>
-        {sizeQuery.data !== undefined && <p>Size: {sizeQuery.data}</p>}
-        {message && <p>{message}</p>}
+        {sizeQuery.data !== undefined && <Text size="2">Size: {sizeQuery.data}</Text>}
+        {readQueryError && (
+          <Text size="2" color="red">
+            {readQueryError.message}
+          </Text>
+        )}
+        {message && <Text size="2">{message}</Text>}
       </Flex>
     </div>
   )
