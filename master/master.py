@@ -244,6 +244,9 @@ class CreateFileRequest(BaseModel):
 class DeleteFileRequest(BaseModel):
     path: str
 
+class GetFileChunksRequest(BaseModel):
+    path: str
+
 class RegisterChunkserverRequest(BaseModel):
     chunkserver_id: str
 
@@ -258,15 +261,15 @@ class HeartbeatRequest(BaseModel):
 
 @app.post("/create_file")
 def create_file(req: CreateFileRequest):
-    master.create_file(req.path, req.size)
+    return master.create_file(req.path, req.size)
 
 @app.post("/delete_file")
 def delete_file(req: DeleteFileRequest):
-    master.delete_file(req.path)
+    return master.delete_file(req.path)
 
 @app.get("/get_file_chunks")
-def get_file_chunks(path: str):
-    return master.get_file_chunks(path)
+def get_file_chunks(req: GetFileChunksRequest):
+    return master.get_file_chunks(req.path)
 
 # -------- From Chunkserver --------
 
