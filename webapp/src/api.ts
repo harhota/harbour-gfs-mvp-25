@@ -84,8 +84,13 @@ export async function readFileRequest(filename: string): Promise<string> {
     return `http://${chunkserver_id}`
   }
 
-  // 3. Fetch data from each chunk in parallel
-  const chunkPromises = chunkSets.map(async (replicas, index) => {
+  // 3. Fetch data from each chunk synchronously to preserve order
+  const chunkData: string[] = []
+  
+  for (let index = 0; index < chunkSets.length; index++) {
+    const replicas = chunkSets[index]
+    let chunkContent: string | null = null
+    
     // Try each replica until one succeeds
     for (const replica of replicas) {
       if (replica.is_deleted) continue
@@ -94,18 +99,26 @@ export async function readFileRequest(filename: string): Promise<string> {
         const chunkserverUrl = resolveChunkserverUrl(replica.chunkserver_id)
         const chunkRes = await fetch(`${chunkserverUrl}/read_chunk/${replica.chunk_id}`)
         if (chunkRes.ok) {
-          return await chunkRes.text()
+          const data = await chunkRes.json()
+          console.log(`[DEBUG] Chunk ${index}:`, data)
+          chunkContent = data.data
+          break // Success, exit replica loop
         }
       } catch (error) {
+        console.log(`[DEBUG] Failed to read chunk ${index} from ${replica.chunkserver_id}:`, error)
         // Try next replica
         continue
       }
     }
-    throw new Error(`Failed to read chunk ${index} from all replicas`)
-  })
+    
+    if (chunkContent === null) {
+      throw new Error(`Failed to read chunk ${index} from all replicas`)
+    }
+    
+    chunkData.push(chunkContent)
+  }
 
-  // 4. Wait for all chunks and concatenate in order
-  const chunkData = await Promise.all(chunkPromises)
+  // 4. Concatenate chunks in order
   return chunkData.join('')
 }
 

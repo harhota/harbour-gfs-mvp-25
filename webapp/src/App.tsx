@@ -16,9 +16,9 @@ export default function App() {
 
   useEffect(() => {
     if (readQuery.data !== undefined) {
-      const parsedReadData = JSON.parse(readQuery.data)
-      if (parsedReadData.data) {
-        setContent(parsedReadData.data)
+      // const parsedReadData = JSON.parse(readQuery.data)
+      if (readQuery.data) {
+        setContent(readQuery.data)
       }
     }
   }, [readQuery.data])
