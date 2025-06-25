@@ -41,10 +41,13 @@ export async function uploadFileRequest(filename: string, data: string): Promise
 
     // Write to all replicas in parallel
     const replicaPromises = replicas.map(async (replica) => {
-      const writeRes = await fetch(`${replica.chunkserver_id}/write_chunk/${replica.chunk_id}`, {
+      const writeRes = await fetch(`${replica.chunkserver_id}/write_chunk`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: chunkData }),
+        body: JSON.stringify({
+          chunk_id: replica.chunk_id,
+          data: chunkData,
+        }),
       })
       if (!writeRes.ok) {
         throw new Error(`Failed to write to ${replica.chunkserver_id}: ${await writeRes.text()}`)
