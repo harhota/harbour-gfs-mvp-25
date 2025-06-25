@@ -32,6 +32,27 @@ class ChunkServer:
             allow_methods=["*"],
             allow_headers=["*"],
         )
+        
+        @self.app.post("/replicate_chunk")
+        async def replicate_chunk(source_chunkserver_id: str, source_chunk_id: int, target_chunk_id: int):
+            # Fetch chunk data from the source chunkserver
+            try:
+                async with httpx.AsyncClient() as client:
+                    resp = await client.get(f"{source_chunkserver_id}/read_chunk/{source_chunk_id}")
+                    if resp.status_code != 200 or resp.json().get("status") != "success":
+                        return {"status": "error", "message": "Failed to fetch chunk from source"}
+                    data = resp.json()["data"]
+            except Exception as e:
+                return {"status": "error", "message": f"Error contacting source chunkserver: {e}"}
+
+            # Write the chunk data to a new file with target_chunk_id
+            dir_path = os.path.join("chunks", self.id.replace(":", "_").replace("/", "_"))
+            os.makedirs(dir_path, exist_ok=True)
+            file_path = os.path.join(dir_path, f"{target_chunk_id}.chunk")
+            with open(file_path, "w") as f:
+                f.write(data)
+            self.stored_chunks.add(target_chunk_id)
+            return {"status": "success", "message": f"Chunk {source_chunk_id} replicated as {target_chunk_id}"}
 
         @self.app.post("/write_chunk")
         async def write_chunk(chunk: ChunkPayload):
