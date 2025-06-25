@@ -1,13 +1,7 @@
 # python virtual env
 .venv 
-
 __pycache__/
-<<<<<<< Updated upstream
-=======
 webapp/node_modules/
 webapp/dist/
 webapp/.vite
-
-#chunks
-test-chunkserver/chunks
->>>>>>> Stashed changes
+chunkserver/chunks
