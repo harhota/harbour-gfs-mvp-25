@@ -1,69 +1,67 @@
-import React, { useState, useEffect } from 'react';
-import { Theme, Button, TextField, TextArea, Flex, Heading } from '@radix-ui/themes';
-import { useUploadFile, useReadFile, useDeleteFile, useFileSize } from './hooks';
+import React, { useState, useEffect } from 'react'
+import { Theme, Button, TextField, TextArea, Flex, Heading } from '@radix-ui/themes'
+import { useUploadFile, useReadFile, useDeleteFile, useFileSize } from './hooks'
 
 export default function App() {
-  const [filename, setFilename] = useState('');
-  const [content, setContent] = useState('');
-  const [message, setMessage] = useState('');
+  const [filename, setFilename] = useState('')
+  const [content, setContent] = useState('')
+  const [message, setMessage] = useState('')
 
-  const uploadMutation = useUploadFile();
-  const deleteMutation = useDeleteFile();
-  const readQuery = useReadFile(filename, false);
-  const sizeQuery = useFileSize(filename, false);
+  const uploadMutation = useUploadFile()
+  const deleteMutation = useDeleteFile()
+  const readQuery = useReadFile(filename, false)
+  const sizeQuery = useFileSize(filename, false)
 
   useEffect(() => {
     if (readQuery.data !== undefined) {
-      setContent(readQuery.data);
+      setContent(readQuery.data)
     }
-  }, [readQuery.data]);
+  }, [readQuery.data])
 
   const handleUpload = async () => {
-    setMessage('');
+    setMessage('')
     try {
-      await uploadMutation.mutateAsync({ filename, data: content });
-      setMessage('File uploaded');
+      await uploadMutation.mutateAsync({ filename, data: content })
+      setMessage('File uploaded')
     } catch (e: any) {
-      setMessage(e.message);
+      setMessage(e.message)
     }
-  };
+  }
 
   const handleRead = async () => {
-    setMessage('');
+    setMessage('')
     try {
-      await readQuery.refetch();
+      await readQuery.refetch()
     } catch (e: any) {
-      setMessage(e.message);
+      setMessage(e.message)
     }
-  };
+  }
 
   const handleDelete = async () => {
-    setMessage('');
+    setMessage('')
     try {
-      await deleteMutation.mutateAsync(filename);
-      setMessage('File deleted');
+      await deleteMutation.mutateAsync(filename)
+      setMessage('File deleted')
     } catch (e: any) {
-      setMessage(e.message);
+      setMessage(e.message)
     }
-  };
+  }
 
   const handleSize = async () => {
-    setMessage('');
+    setMessage('')
     try {
-      await sizeQuery.refetch();
+      await sizeQuery.refetch()
     } catch (e: any) {
-      setMessage(e.message);
+      setMessage(e.message)
     }
-  };
+  }
 
   return (
-    <Theme>
+    <div>
       <Heading>Harbour DFS Client</Heading>
       <Flex direction="column" gap="3" style={{ maxWidth: 600, margin: '0 auto', padding: '1rem' }}>
-        <TextField.Root>
-          <TextField.Input placeholder="Filename" value={filename} onChange={e => setFilename(e.target.value)} />
-        </TextField.Root>
-        <TextArea placeholder="File contents" value={content} onChange={e => setContent(e.target.value)} rows={10} />
+        <TextField.Root placeholder="Filename" value={filename} onChange={(e) => setFilename(e.target.value)} />
+        <TextArea placeholder="File contents" value={content} onChange={(e) => setContent(e.target.value)} rows={10} />
         <Flex gap="2" wrap="wrap">
           <Button onClick={handleUpload}>Upload</Button>
           <Button onClick={handleRead}>Read</Button>
@@ -73,6 +71,6 @@ export default function App() {
         {sizeQuery.data !== undefined && <p>Size: {sizeQuery.data}</p>}
         {message && <p>{message}</p>}
       </Flex>
-    </Theme>
-  );
+    </div>
+  )
 }
