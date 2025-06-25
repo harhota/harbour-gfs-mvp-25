@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  gfs:
+    build: .
+    ports:
+      - "8000:8000"
+      - "5173:5173"
+    volumes:
+      - .:/app

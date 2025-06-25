@@ -14,9 +14,10 @@ async def start_services():
     chunkservers = []
     for i in range(5):
         chunkserver = subprocess.Popen(
-            ["python", "chunkserver.py"],
-            cwd="./test-chunkserver"
+            ["python3", "chunkserver.py"],
+            cwd="./chunkserver"
         )
+
         chunkservers.append(chunkserver)
         time.sleep(0.5)  # Stagger startup
     
