@@ -1,3 +1,6 @@
+# python virtual env
+.venv 
+
 __pycache__/
 <<<<<<< Updated upstream
 =======
