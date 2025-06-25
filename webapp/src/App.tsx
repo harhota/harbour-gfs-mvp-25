@@ -75,6 +75,11 @@ export default function App() {
             {readQueryError.message}
           </Text>
         )}
+        {sizeQuery.error && (
+          <Text size="2" color="red">
+            {sizeQuery.error.message}
+          </Text>
+        )}
         {message && <Text size="2">{message}</Text>}
       </Flex>
     </div>
