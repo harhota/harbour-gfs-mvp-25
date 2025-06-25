@@ -64,7 +64,6 @@ export default function App() {
     try {
       await sizeQuery.refetch()
     } catch (e: any) {
-      console.log(`[DEBUG]: getting size error: `, e)
       const parsedError = JSON.parse(e.message)
       setErrorMessage(parsedError.detail)
     }
