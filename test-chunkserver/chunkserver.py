@@ -4,12 +4,14 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import httpx
 import asyncio
+import os
 
 class ChunkServer:
     def __init__(self, master_url: str = "http://localhost:8000"):
         self.host = "0.0.0.0"
         self.port = self.find_free_port()
         self.address = f"http://{self.get_ip_address()}:{self.port}"
+        self.id = self.address
         self.master_url = master_url
         self.stored_chunks = set()
         self.heartbeat_interval = 10  # seconds
@@ -27,14 +29,31 @@ class ChunkServer:
 
         @self.app.post("/write_chunk")
         async def write_chunk(chunk_id: int, data: str):
+            # Ensure the directory for this chunkserver exists
+            dir_path = os.path.join("chunks", self.id.replace(":", "_").replace("/", "_"))
+            os.makedirs(dir_path, exist_ok=True)
+
+            # Write the chunk data to a file named by chunk_id
+            file_path = os.path.join(dir_path, f"{chunk_id}.chunk")
+            with open(file_path, "w") as f:
+                f.write(data)
+
             self.stored_chunks.add(chunk_id)
             return {"status": "success", "address": self.address}
 
         @self.app.get("/read_chunk/{chunk_id}")
         async def read_chunk(chunk_id: int):
-            if chunk_id in self.stored_chunks:
-                return {"data": f"data from {self.address}"}
-            return {"error": "Chunk not found"}
+            # Check if the chunk is stored
+            if chunk_id not in self.stored_chunks:
+                return {"status": "error", "message": "Chunk not found"}
+
+            # Read the chunk data from the file
+            dir_path = os.path.join("chunks", self.id.replace(":", "_").replace("/", "_"))
+            file_path = os.path.join(dir_path, f"{chunk_id}.chunk")
+            with open(file_path, "r") as f:
+                data = f.read()
+
+            return {"status": "success", "data": data}
 
     def find_free_port(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
