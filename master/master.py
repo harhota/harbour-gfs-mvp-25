@@ -7,6 +7,7 @@ from typing import TypedDict
 import time
 
 import uvicorn
+from fastapi.middleware.cors import CORSMiddleware
 
 # GFS Master Node Implementation
 class ChunkEntry(TypedDict):
@@ -232,6 +233,13 @@ master = Master()
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # -------------------
 # Request Models
