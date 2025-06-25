@@ -13,11 +13,16 @@ class ChunkPayload(BaseModel):
 
 class ChunkServer:
     def __init__(self, master_url: str = "http://master:8000"):
+        self.master_url = master_url or os.getenv("MASTER_URL", "http://master:8000")
         self.host = "0.0.0.0"
-        self.port = 8000
+        self.port = 8000  # internal container port
+
+        self.external_host = os.getenv("EXTERNAL_HOST", "localhost")
+        self.external_port = os.getenv("EXTERNAL_PORT", "8000")  # default fallback
+
         chunkserver_id = os.getenv("CHUNKSERVER_ID", socket.gethostname())
         self.id = chunkserver_id
-        self.address = f"http://{self.id}:{self.port}"
+        self.address = f"http://{self.external_host}:{self.external_port}" 
 
         self.master_url = master_url
         self.stored_chunks = set()
