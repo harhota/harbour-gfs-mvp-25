@@ -1,5 +1,6 @@
 import socket
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import httpx
 import asyncio
@@ -8,18 +9,27 @@ class ChunkServer:
     def __init__(self, master_url: str = "http://localhost:8000"):
         self.host = "0.0.0.0"
         self.port = self.find_free_port()
-        self.address = f"http://{socket.gethostname()}:{self.port}"
+        self.address = f"http://{self.get_ip_address()}:{self.port}"
         self.master_url = master_url
         self.stored_chunks = set()
         self.heartbeat_interval = 10  # seconds
-        
+
         self.app = FastAPI()
-        
+
+        # ✅ Add CORS middleware
+        self.app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],  # or specify allowed origins
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+
         @self.app.post("/write_chunk")
         async def write_chunk(chunk_id: int, data: str):
             self.stored_chunks.add(chunk_id)
             return {"status": "success", "address": self.address}
-            
+
         @self.app.get("/read_chunk/{chunk_id}")
         async def read_chunk(chunk_id: int):
             if chunk_id in self.stored_chunks:
@@ -28,8 +38,16 @@ class ChunkServer:
 
     def find_free_port(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind(('0.0.0.0', 0))
+            s.bind(('', 0))
             return s.getsockname()[1]
+
+    def get_ip_address(self):
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+        finally:
+            s.close()
 
     async def register_with_master(self):
         async with httpx.AsyncClient() as client:
@@ -54,11 +72,10 @@ class ChunkServer:
         await self.register_with_master()
         asyncio.create_task(self.send_heartbeat_loop())
 
-        config = uvicorn.Config(self.app, host=self.host, port=self.port)
+        config = uvicorn.Config(self.app, host=self.host, port=self.port, log_level="info")
         server = uvicorn.Server(config)
         print(f"✅ Chunkserver running at {self.address}")
         await server.serve()
-
 
 if __name__ == "__main__":
     server = ChunkServer()

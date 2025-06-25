@@ -8,6 +8,7 @@ import time
 
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import HTTPException
 
 # GFS Master Node Implementation
 class ChunkEntry(TypedDict):
@@ -266,18 +267,32 @@ class HeartbeatRequest(BaseModel):
 # -------------------
 
 # -------- From Client --------
-
 @app.post("/create_file")
 def create_file(req: CreateFileRequest):
-    return master.create_file(req.path, req.size)
+    try:
+        return master.create_file(req.path, req.size)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/delete_file")
 def delete_file(req: DeleteFileRequest):
-    return master.delete_file(req.path)
+    try:
+        return master.delete_file(req.path)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/get_file_chunks")
-def get_file_chunks(path : str):
-    return master.get_file_chunks(path)
+def get_file_chunks(path: str):
+    try:
+        return master.get_file_chunks(path)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # -------- From Chunkserver --------
 
