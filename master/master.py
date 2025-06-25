@@ -1,7 +1,7 @@
 import asyncio
 from fastapi import FastAPI
 from pydantic import BaseModel
-from typing import Any, List, Dict, Set
+from typing import List, Dict, Set
 import random
 from typing import TypedDict
 import time
