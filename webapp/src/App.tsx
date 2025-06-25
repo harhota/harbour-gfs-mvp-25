@@ -6,6 +6,7 @@ export default function App() {
   const [filename, setFilename] = useState('')
   const [content, setContent] = useState('')
   const [message, setMessage] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
 
   const uploadMutation = useUploadFile()
   const deleteMutation = useDeleteFile()
@@ -15,45 +16,56 @@ export default function App() {
 
   useEffect(() => {
     if (readQuery.data !== undefined) {
-      setContent(readQuery.data)
+      const parsedReadData = JSON.parse(readQuery.data)
+      if (parsedReadData.data) {
+        setContent(parsedReadData.data)
+      }
     }
   }, [readQuery.data])
 
   const handleUpload = async () => {
     setMessage('')
+    setErrorMessage('')
     try {
       await uploadMutation.mutateAsync({ filename, data: content })
       setMessage('File uploaded')
     } catch (e: any) {
-      setMessage(e.message)
+      const parsedError = JSON.parse(e.message)
+      setErrorMessage(parsedError.detail)
     }
   }
 
   const handleRead = async () => {
     setMessage('')
+    setErrorMessage('')
     try {
       await readQuery.refetch()
     } catch (e: any) {
-      setMessage(e.message)
+      const parsedError = JSON.parse(e.message)
+      setErrorMessage(parsedError.detail)
     }
   }
 
   const handleDelete = async () => {
     setMessage('')
+    setErrorMessage('')
     try {
       await deleteMutation.mutateAsync(filename)
       setMessage('File deleted')
     } catch (e: any) {
-      setMessage(e.message)
+      const parsedError = JSON.parse(e.message)
+      setErrorMessage(parsedError.detail)
     }
   }
 
   const handleSize = async () => {
     setMessage('')
+    setErrorMessage('')
     try {
       await sizeQuery.refetch()
     } catch (e: any) {
-      setMessage(e.message)
+      const parsedError = JSON.parse(e.message)
+      setErrorMessage(parsedError.detail)
     }
   }
 
@@ -81,6 +93,11 @@ export default function App() {
           </Text>
         )}
         {message && <Text size="2">{message}</Text>}
+        {errorMessage && (
+          <Text size="2" color="red">
+            {errorMessage}
+          </Text>
+        )}
       </Flex>
     </div>
   )
