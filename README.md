@@ -1,8 +1,8 @@
-# Project README
+# Distributed File System - GFS-inspired Implementation
 
 ## Overview
 
-This project implements a distributed storage system inspired by **Google File System (GFS)**. GFS is designed to handle large-scale data across many machines, providing fault tolerance, high throughput, and reliability by dividing files into chunks stored on multiple chunk servers coordinated by a master server.
+This project implements a distributed storage system inspired by **Google File System (GFS)**. The system is designed to handle large-scale data across many machines, providing fault tolerance, high throughput, and reliability by dividing files into chunks stored on multiple chunk servers coordinated by a master server.
 
 Our system includes:
 
@@ -34,11 +34,52 @@ Our system includes:
 
 4. Use the frontend interface to upload, download, and manage files within the distributed file system.
 
-Architecture:
 
-- Master Server: Maintains metadata for files and chunks, manages chunk locations and replication.
-- Chunk Servers: Store chunks of files and handle client requests for data.
-- Frontend (Client): Single combined client and frontend interface for users to interact with the system.
+
+# Technical Specifications
+
+### Core Architecture
+| Component          | Specification                          |
+|--------------------|----------------------------------------|
+| Replication Factor | 3 replicas per chunk (configurable)    |
+| Chunk Size         | 1000 characters                        |
+| Chunkserver Capacity | 5000 chunks per server               |
+| Max File Size      | Limited by available chunkservers      |
+
+### Performance Characteristics
+| Metric             | Value                                  |
+|--------------------|----------------------------------------|
+| Heartbeat Interval | 10 seconds                             |
+| Heartbeat Timeout  | 20 seconds                             |
+| Garbage Collection | Runs every 2 minutes                   |
+| Chunk Allocation   | Random distribution with capacity awareness |
+
+### Fault Tolerance Features
+- Automatic chunk replication
+- Dead chunkserver detection via heartbeat
+- Failed chunk re-replication
+- Graceful chunkserver removal
+- Deleted chunk retention (2 minutes before GC)
+
+### Storage Management
+| Feature            | Implementation                         |
+|--------------------|----------------------------------------|
+| Chunk Distribution | Random with capacity constraints       |
+| Space Reclamation  | Time-delayed garbage collection        |
+| Load Balancing     | Even distribution across chunkservers  |
+
+### API Endpoints
+**Master Server:**
+- `/create_file` - Allocates chunks for new files
+- `/delete_file` - Marks files for deletion
+- `/get_file_chunks` - Returns chunk locations
+- `/register_chunkserver` - Adds new storage nodes
+- `/heartbeat` - Chunkserver health checks
+
+**Chunk Server:**
+- `/write_chunk` - Stores chunk data
+- `/read_chunk` - Retrieves chunk data
+- `/replicate_chunk` - Copies chunks between servers
 
 Notes:
 
@@ -47,3 +88,5 @@ Notes:
 - The frontend communicates with the master and chunk servers via API calls.
 
 For any questions or issues, please refer to the project documentation or contact the maintainers.
+
+
