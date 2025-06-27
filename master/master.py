@@ -255,8 +255,9 @@ class Master:
         """
         for path, parts in self.files.items():
             for idx, replicas in enumerate(parts):
-                for chunk in replicas:
-                    if chunk['chunkserver_id'] == chunk.chunkserver_id and chunk['chunk_id'] == chunk.chunk_id:
+                for target_chunk in replicas:
+                    if (target_chunk['chunkserver_id'] == chunk['chunkserver_id'] and
+                        target_chunk['chunk_id'] == chunk['chunk_id']):
                         return path, idx
         return None, None
 
